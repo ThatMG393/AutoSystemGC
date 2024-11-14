@@ -3,32 +3,27 @@
 	"id": "autosystemgc",
 	"version": "${version}",
 	"name": "AutoSystemGC",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "Automatically or manually call System.gc() to free up memory on your server! (and client?)",
 	"authors": [
-		"Me!"
+		"ThatMG393"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"homepage": "https://github.com/ThatMG393/AutoSystemGC",
+		"sources": "https://github.com/ThatMG393/AutoSystemGC",
+		"issues": "https://github.com/ThatMG393/AutoSystemGC/issues"
 	},
-	"license": "CC0-1.0",
 	"icon": "assets/autosystemgc/icon.png",
 	"environment": "*",
 	"entrypoints": {
-		"main": [
-			"com.thatmg393.AutoSystemGC"
-		]
+		"main": [ "com.thatmg393.autosystemgc.AutoSystemGC" ]
 	},
 	"mixins": [
 		"autosystemgc.mixins.json"
 	],
 	"depends": {
-		"fabricloader": ">=0.16.9",
-		"minecraft": "~1.21.1",
-		"java": ">=21",
+		"fabricloader": ">=0.11.0",
+		"minecraft": ">=1.20",
+		"java": ">=17",
 		"fabric-api": "*"
 	},
-	"suggests": {
-		"another-mod": "*"
-	}
 }
