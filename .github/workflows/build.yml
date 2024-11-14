@@ -4,34 +4,86 @@
 # against bad commits.
 
 name: build
-on: [pull_request, push]
+on: 
+  pull_request:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - '**.md'
+      - '.devcon*'
+      - 'devcon*.json'
+      - '.gitpod*'
+      - 'Dockerfile'
 
 jobs:
   build:
+    permissions:
+      contents: write
     strategy:
       matrix:
-        # Use these Java versions
-        java: [
-          21,    # Current Java LTS
-        ]
-    runs-on: ubuntu-22.04
+        java: [ 21 ]
+        os: [ ubuntu-22.04 ]
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - name: validate gradle wrapper
-        uses: gradle/wrapper-validation-action@v2
-      - name: setup jdk ${{ matrix.java }}
+        with:
+          fetch-depth: 1
+
+      - name: Validate gradle wrapper
+        uses: gradle/wrapper-validation-action@v1
+
+      - name: Setup JDK ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
-          distribution: 'microsoft'
-      - name: make gradle wrapper executable
+          distribution: 'temurin'
+
+      - name: Make gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: build
-        run: ./gradlew build
-      - name: capture build artifacts
-        if: ${{ matrix.java == '21' }} # Only upload artifacts built from latest java
+
+      - name: Build mod
+        id: build_bin
+        run: bash build.sh ${{ github.ref }}
+
+      - name: Capture build artifacts 
         uses: actions/upload-artifact@v4
         with:
-          name: Artifacts
+          name: autosystemgc-build
           path: build/libs/
+
+      - name: Update CHANGELOG.md
+        if: ${{ startsWith(steps.build_bin.outputs.binver, 'v') }}
+        uses: requarks/changelog-action@v1.10.2
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          tag: ${{ github.ref_name }}
+          includeInvalidCommits: true
+          excludeTypes: ''
+          useGitmojis: false
+          reverseOrder: true
+
+      - name: Upload to Modrinth and Github
+        if: ${{ startsWith(steps.build_bin.outputs.binver, 'v') }}
+        uses: Kir-Antipov/mc-publish@v3.3
+        with: 
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          github-token: ${{ secrets.GH_TOKEN }}
+
+          name: AutoSystemGC ${{ steps.build_bin.outputs.binver }}
+          files: build/libs/autosystemgc-${{ steps.build_bin.outputs.binver }}.jar
+          version-type: release
+ 
+          github-generate-changelog: true
+          github-draft: false
+          github-prerelease: false
+          changelog-file: CHANGELOG.md
+
+      - name: Commit CHANGELOG.md
+        if: ${{ startsWith(steps.build_bin.outputs.binver, 'v') }}
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          branch: master
+          commit_message: 'Release: Update CHANGELOG.md for ${{ steps.build_bin.outputs.binver }} [skip ci]'
+          file_pattern: CHANGELOG.md
+ 
