@@ -12,6 +12,7 @@
 		"sources": "https://github.com/ThatMG393/AutoSystemGC",
 		"issues": "https://github.com/ThatMG393/AutoSystemGC/issues"
 	},
+	"license": "CC0-1.0",
 	"icon": "assets/autosystemgc/icon.png",
 	"environment": "*",
 	"entrypoints": {
