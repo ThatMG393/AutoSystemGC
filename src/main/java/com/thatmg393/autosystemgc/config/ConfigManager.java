@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.thatmg393.autosystemgc.AutoSystemGC;
 
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -20,7 +21,7 @@ public class ConfigManager {
     private static final Logger LOGGER = LoggerFactory.getLogger("AutoSystemGC-Config");
 
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().serializeNulls().setLenient().create();
-    public static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("autosystemgc.json");
+    public static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve(AutoSystemGC.MOD_ID + ".json");
     public static final Config DEFAULT_CONFIG = new Config();
 
     private static Config loadedConfig;
@@ -47,7 +48,11 @@ public class ConfigManager {
             return onDiskConfig;
         } catch (IOException e) {
             LOGGER.error("Failed to load config! Falling back to default!", e);
-            return DEFAULT_CONFIG;
+
+            loadedConfig = DEFAULT_CONFIG;
+            saveConfig();
+
+            return loadedConfig;
         }
     }
 
@@ -61,6 +66,20 @@ public class ConfigManager {
         } catch (IOException e) {
             LOGGER.error("Failed to save config file!", e);
         }
+    }
+
+    public static void prepareForReload() {
+        LOGGER.info("Discarding loaded config!");
+        loadedConfig = null;
+        LOGGER.info("Now call getOrLoadConfig() again.");
+    }
+
+    public static void registerShutdownListener() {
+        LOGGER.info("Registering a shutdown hook!");
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            LOGGER.info("JVM Shutting down, saving the config!");
+            saveConfig();
+        }));
     }
 
     private static Config mergeConfig(Config newConfig, Config currentConfig) {
