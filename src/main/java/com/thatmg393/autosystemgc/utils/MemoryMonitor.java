@@ -1,5 +1,6 @@
 package com.thatmg393.autosystemgc.utils;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +29,7 @@ public class MemoryMonitor {
     @Getter
     private long peakUsedMemory = 0;
 
-    private boolean isHighMemoryAlertActive;
+    private Instant lastHighMemoryAlert;
 
     public interface MemoryListener {
         void onHighMemory(long usedMemory, long freeMemory, double usedPercent);
@@ -57,7 +58,7 @@ public class MemoryMonitor {
 
         Instant gcTime = Instant.now();
         System.gc();
-        System.runFinalization();
+        System.runFinalization(); // ts not necessary
 
         try {
             Thread.sleep(100);
@@ -92,11 +93,13 @@ public class MemoryMonitor {
 
         double usagePercent = (usedMemory * 100.0) / totalMemory;
 
-        if (usagePercent >= highMemoryThresholdPercent && !isHighMemoryAlertActive) {
-            isHighMemoryAlertActive = true;
-            notifyHighMemory(usedMemory, freeMemory, usagePercent);
-        } else if (usagePercent < highMemoryThresholdPercent && isHighMemoryAlertActive) {
-            isHighMemoryAlertActive = false;
+        if (usagePercent >= highMemoryThresholdPercent) {
+            if (lastHighMemoryAlert == null)
+                notifyHighMemory(usedMemory, freeMemory, usagePercent);
+            else if (Duration.between(lastHighMemoryAlert, Instant.now()).getSeconds() > 5)
+                notifyHighMemory(usedMemory, freeMemory, usagePercent);
+            
+            lastHighMemoryAlert = Instant.now();
         }
     }
 
@@ -138,12 +141,13 @@ public class MemoryMonitor {
         @Override
         public String toString() {
             return MessageFormatter.arrayFormat(
-                "Memory Cleared:\n" +
+                "Memory Cleared on {}:\n" +
                 "- Freed: {} MB ({} %)\n" + 
                 "- Before: Used={} MB, Free={} MB\n" +
                 "- After: Used={} MB, Free={} MB\n" +
                 "- Peak Usage: {} MB",
                 new Object[] {
+                    executionTime,
                     memoryFreed / (1024 * 1024),
                     Math.round(percentageFreed * 100) / 100.0,
                     beforeUsed / (1024 * 1024), 

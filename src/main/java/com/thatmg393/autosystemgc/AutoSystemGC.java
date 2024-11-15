@@ -26,7 +26,7 @@ public class AutoSystemGC implements ModInitializer, Runnable {
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	public static Config CONFIG = ConfigManager.getOrLoadConfig();
 
-	private static final ScheduledExecutorService POOL = Executors.newScheduledThreadPool(1);
+	private static ScheduledExecutorService POOL = Executors.newScheduledThreadPool(1);
 	private static MemoryMonitor MONITOR = new MemoryMonitor(CONFIG.cleanThresholdPercent, CONFIG.memoryCheckInterval);
 
 	private static MinecraftServer serverInstance = null;
@@ -65,13 +65,18 @@ public class AutoSystemGC implements ModInitializer, Runnable {
 				).then(
 					CommandManager.literal("reload")
 					.executes(ctx -> {
+						LOGGER.info("Reloading AutoSystemGC.");
+						
 						ConfigManager.prepareForReload();
 						CONFIG = ConfigManager.getOrLoadConfig();
 
+						POOL.shutdownNow();
+						POOL = Executors.newScheduledThreadPool(1);
+
 						MONITOR.removeListener(MEMORY_LISTENER);
 						MONITOR.stopMonitoring();
-
 						MONITOR = new MemoryMonitor(CONFIG.cleanThresholdPercent, CONFIG.memoryCheckInterval);
+
 						eventListener.onServerStarted(ctx.getSource().getServer());
 
 						return 0;
