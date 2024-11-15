@@ -24,5 +24,10 @@
 		"minecraft": "*",
 		"java": ">=8",
 		"fabric-api": "*"
+	},
+	"custom": {
+		"mc-publish": {
+			"modrinth": "hRqAE3d4"
+		}
 	}
 }
