@@ -80,7 +80,7 @@ public class MemoryMonitor {
             afterUsed,
             beforeFree,
             afterFree,
-            peakUsedMemory
+            (peakUsedMemory == 0) ? beforeUsed : peakUsedMemory
         );
     }
 

@@ -44,14 +44,19 @@ public class AutoSystemGC implements ModInitializer, Runnable {
 		ServerStarted eventListener = (server) -> {
 			serverInstance = server;
 
-			if (CONFIG.cleanInterval > 30) POOL.scheduleWithFixedDelay(this, CONFIG.cleanInterval, CONFIG.cleanInterval, TimeUnit.SECONDS);
-			else LOGGER.info("Will not be cleaning with intervals because the clean intervals is lower than 30 seconds.");
+			if (CONFIG.cleanInterval > 30) {
+				LOGGER.info("Will now clean for every " + CONFIG.cleanInterval + "s!");
+				POOL.scheduleWithFixedDelay(this, CONFIG.cleanInterval, CONFIG.cleanInterval, TimeUnit.SECONDS);
+			} else LOGGER.info("Will not be cleaning with intervals because the clean intervals is lower than 30 seconds.");
 
 			if (CONFIG.cleanThresholdPercent < 30) {
 				LOGGER.info("Clean threshold is lower than 30!");
 				LOGGER.info("Will not be monitoring memory.");
+				
+				return;
 			}
-			LOGGER.info("Will be monitoring memory as well.");
+
+			LOGGER.info("Will now be monitoring memory!");
 			MONITOR.addListener(MEMORY_LISTENER);
 			MONITOR.startMonitoring();
 		};
@@ -82,6 +87,11 @@ public class AutoSystemGC implements ModInitializer, Runnable {
 						return 0;
 					})
 				)
+			);
+
+			dispatcher.register(
+				CommandManager.literal("agc")
+				.redirect(dispatcher.getRoot().getChild("autosystemgc"))
 			);
 		});
 
