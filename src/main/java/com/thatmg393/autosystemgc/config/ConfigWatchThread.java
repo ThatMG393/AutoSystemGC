@@ -26,7 +26,8 @@ public class ConfigWatchThread extends Thread {
     private final String nameOfFileBeingWatched;
     private final Supplier<ArrayList<ConfigReloadCallback>> listeners;
 
-    public ConfigWatchThread(Path fileToBeWatched, Supplier<ArrayList<ConfigReloadCallback>> listeners) throws IOException {
+    public ConfigWatchThread(Path fileToBeWatched, Supplier<ArrayList<ConfigReloadCallback>> listeners)
+            throws IOException {
         super("ConfigWatchThread-for-" + fileToBeWatched.toFile().getName());
         this.LOGGER = LoggerFactory.getLogger(getName());
 
@@ -50,31 +51,35 @@ public class ConfigWatchThread extends Thread {
         LOGGER.info("Will now monitor " + nameOfFileBeingWatched);
         while (!interrupted()) {
             try {
-                WatchKey fileEvent = WATCH_SERVICE.take();
+                WatchKey fileEvent;
+                while ((fileEvent = WATCH_SERVICE.take()) != null) {
+                    for (WatchEvent<?> event : fileEvent.pollEvents()) {
+                        if (!fileEvent.isValid())
+                            break;
 
-                for (WatchEvent<?> event : fileEvent.pollEvents()) {
-                    if (!fileEvent.isValid()) break;
+                        Path file = ((WatchEvent<Path>) event).context();
+                        if (!file.toFile().getName().equals(nameOfFileBeingWatched))
+                            continue;
+                        LOGGER.info("Config has changed!");
 
-                    Path file = ((WatchEvent<Path>) event).context();
-                    if (!file.toFile().getName().equals(nameOfFileBeingWatched)) continue;
-                    LOGGER.info("Config has changed!");
-                    
-                    WatchEvent.Kind<?> kind = event.kind();
-                    if (kind == OVERFLOW) continue;
+                        WatchEvent.Kind<?> kind = event.kind();
+                        if (kind == OVERFLOW)
+                            continue;
 
-                    if (kind == ENTRY_DELETE) {
-                        LOGGER.info("Config has been deleted! Saving loaded one.. ");
-                        if (!ConfigManager.saveConfig()) {
-                            LOGGER.info("We recreating instead.");
-                            ConfigManager.saveDefaultConfig();
+                        if (kind == ENTRY_DELETE) {
+                            LOGGER.info("Config has been deleted! Saving loaded one.. ");
+                            if (!ConfigManager.saveConfig()) {
+                                LOGGER.info("We recreating instead.");
+                                ConfigManager.saveDefaultConfig();
+                            }
+                        } else if (kind == ENTRY_MODIFY) {
+                            LOGGER.info("Config has been modified! Reloading config...");
+                            notifyConfigReload(ConfigManager.reloadLoadedConfig());
                         }
-                    } else if (kind == ENTRY_MODIFY) {
-                        LOGGER.info("Config has been modified! Reloading config...");
-                        notifyConfigReload(ConfigManager.reloadLoadedConfig());
                     }
-                }
 
-                fileEvent.reset();
+                    fileEvent.reset();
+                }
             } catch (ClosedWatchServiceException e) {
                 LOGGER.error("Watch service has been shutdown, shutting down thread as well...");
                 return;
@@ -85,8 +90,10 @@ public class ConfigWatchThread extends Thread {
             }
         }
 
-        try { WATCH_SERVICE.close(); }
-        catch (IOException e) { }
+        try {
+            WATCH_SERVICE.close();
+        } catch (IOException e) {
+        }
     }
 
     private void notifyConfigReload(Config reloadedConfig) {

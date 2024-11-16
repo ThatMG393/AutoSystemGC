@@ -28,7 +28,8 @@ public class ConfigManager {
     private static final ArrayList<ConfigReloadCallback> RELOAD_LISTENERS = new ArrayList<>();
 
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().serializeNulls().setLenient().create();
-    public static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve(AutoSystemGC.MOD_ID + ".json");
+    public static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir()
+            .resolve(AutoSystemGC.MOD_ID + ".json");
     public static final Config DEFAULT_CONFIG = new Config();
 
     @Getter
@@ -60,12 +61,14 @@ public class ConfigManager {
             Config onDiskConfig = GSON.fromJson(reader, Config.class);
 
             if (onDiskConfig.configVersion < DEFAULT_CONFIG.configVersion) {
-                LOGGER.info("Config version mismatch! Expecting " + DEFAULT_CONFIG.configVersion + ", instead got " + onDiskConfig.configVersion);
+                LOGGER.info("Config version mismatch! Expecting " + DEFAULT_CONFIG.configVersion + ", instead got "
+                        + onDiskConfig.configVersion);
                 LOGGER.warn("Upgrading config, this may or may not preserve config values!");
 
                 return loadedConfig = mergeConfig(DEFAULT_CONFIG, onDiskConfig);
             } else if (onDiskConfig.configVersion > DEFAULT_CONFIG.configVersion) {
-                LOGGER.warn("Is this a mod downgrade? Found newer version (" + onDiskConfig.configVersion + ") of the config!");
+                LOGGER.warn("Is this a mod downgrade? Found newer version (" + onDiskConfig.configVersion
+                        + ") of the config!");
                 LOGGER.warn("Please proceed with caution...");
             }
 
@@ -96,8 +99,9 @@ public class ConfigManager {
     public static void saveDefaultConfig() {
         LOGGER.info("Creating default config.");
         saveConfigInternal(DEFAULT_CONFIG);
-        
-        if (!isManagerWatchingConfig) configWatcher.start();
+
+        if (!isManagerWatchingConfig)
+            configWatcher.start();
     }
 
     public static void saveAndUnloadConfig() {
@@ -111,15 +115,18 @@ public class ConfigManager {
         LOGGER.info("Registering config shutdown hook");
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
-                if (configWatcher != null) configWatcher.shutdown();
-            } catch (IOException e) { }
+                if (configWatcher != null)
+                    configWatcher.shutdown();
+            } catch (IOException e) {
+            }
 
             saveAndUnloadConfig();
         }));
     }
 
     public static void addConfigReloadListener(ConfigReloadCallback c) {
-        if (isManagerWatchingConfig) RELOAD_LISTENERS.add(c);
+        if (isManagerWatchingConfig)
+            RELOAD_LISTENERS.add(c);
     }
 
     public static void removeConfigReloadListener(ConfigReloadCallback instance) {
@@ -128,7 +135,8 @@ public class ConfigManager {
 
     private static boolean saveConfigInternal(Config config) {
         LOGGER.info("Saving config file...");
-        try (BufferedWriter writer = Files.newBufferedWriter(CONFIG_PATH, StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+        try (BufferedWriter writer = Files.newBufferedWriter(CONFIG_PATH, StandardOpenOption.WRITE,
+                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
             writer.write(GSON.toJson(config));
             writer.flush();
 
