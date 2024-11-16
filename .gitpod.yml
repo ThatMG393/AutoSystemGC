@@ -1,0 +1,15 @@
+image:
+  file: .gitpod/Dockerfile
+
+tasks:
+  - name: Setup VSCode Debugging
+    command: ./gradlew vscode
+
+ports:
+  - port: 6080
+    visibility: private
+    name: Desktop
+
+vscode:
+  extensions:
+    - vscjava.vscode-java-pack
