@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import com.mojang.brigadier.CommandDispatcher;
 import com.thatmg393.autosystemgc.config.Config;
 import com.thatmg393.autosystemgc.config.ConfigManager;
+import com.thatmg393.autosystemgc.config.ConfigManager.ConfigReloadCallback;
 import com.thatmg393.autosystemgc.utils.MemoryMonitor;
 import com.thatmg393.autosystemgc.utils.MemoryMonitor.MemoryClearResult;
 import com.thatmg393.autosystemgc.utils.MemoryMonitor.MemoryListener;
@@ -26,7 +27,7 @@ import net.minecraft.server.command.CommandManager.RegistrationEnvironment;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 
-public class AutoSystemGC implements ModInitializer, Runnable, MemoryListener, ServerStarted, ServerStopping, CommandRegistrationCallback {
+public class AutoSystemGC implements ModInitializer, Runnable, MemoryListener, ServerStarted, ServerStopping, CommandRegistrationCallback, ConfigReloadCallback {
 	public static final String MOD_ID = "autosystemgc";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	
@@ -38,7 +39,8 @@ public class AutoSystemGC implements ModInitializer, Runnable, MemoryListener, S
 	@Override
 	public void onInitialize() {
 		LOGGER.info("lowkey overengineered and messy ash");
-		ConfigManager.registerShutdownListener();
+		ConfigManager.registerShutdownHandler();
+		ConfigManager.addConfigReloadListener(this);
 		CommandRegistrationCallback.EVENT.register(this);
 		ServerLifecycleEvents.SERVER_STARTED.register(this);
 		ServerLifecycleEvents.SERVER_STOPPING.register(this);
@@ -53,7 +55,7 @@ public class AutoSystemGC implements ModInitializer, Runnable, MemoryListener, S
 				.executes(ctx -> { run(); return 0; })
 			).then(
 				CommandManager.literal("reload")
-				.executes(ctx -> reloadModAndConfig(ctx.getSource().getServer()))
+				.executes(ctx -> { onConfigReload(ConfigManager.reloadLoadedConfig()); return 0; })
 			)
 		);
 
@@ -99,26 +101,27 @@ public class AutoSystemGC implements ModInitializer, Runnable, MemoryListener, S
 
 	@Override
 	public void onServerStopping(MinecraftServer server) {
-		ConfigManager.saveConfig();
+		ConfigManager.saveAndUnloadConfig();
+		ConfigManager.removeConfigReloadListener(this);
 	}
 
-	public int reloadModAndConfig(MinecraftServer server) {
-		LOGGER.info("Reloading AutoSystemGC.");
+	@Override
+	public void onConfigReload(Config reloadedConfig) {
+		runOnServerThread(() -> {
+			LOGGER.info("Reloading AutoSystemGC!");
+			currentConfig = reloadedConfig;
+			
+			scheduledExecutor.shutdownNow();
+			scheduledExecutor = Executors.newScheduledThreadPool(1);
 
-		// Goofy aah reload sequence
-		ConfigManager.prepareForReload();
-		currentConfig = ConfigManager.getOrLoadConfig();
+			memoryMonitor.removeListener(this);
+			memoryMonitor.stopMonitoring();
+			memoryMonitor = new MemoryMonitor(currentConfig.cleanThresholdPercent, currentConfig.memoryCheckInterval);
 
-		scheduledExecutor.shutdownNow();
-		scheduledExecutor = Executors.newScheduledThreadPool(1);
+			onServerStarted(serverInstance);
 
-		memoryMonitor.removeListener(this);
-		memoryMonitor.stopMonitoring();
-		memoryMonitor = new MemoryMonitor(currentConfig.cleanThresholdPercent, currentConfig.memoryCheckInterval);
-
-		onServerStarted(server);
-		
-		return 0;
+			LOGGER.info("Reload done.");
+		});
 	}
 
 	public void runOnServerThread(Runnable task) {
