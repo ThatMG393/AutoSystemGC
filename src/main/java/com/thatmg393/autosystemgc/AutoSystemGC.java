@@ -103,7 +103,7 @@ public class AutoSystemGC implements ModInitializer, Runnable {
 	public void run() {
 		MemoryClearResult result = MONITOR.clearMemory();
 		if (CONFIG.logOnCleanTrigger) LOGGER.info(result.toString());
-		if (CONFIG.broadcastOnCleanTrigger) runOnServerThread(() -> serverInstance.sendMessage(Text.of(result.toString())));
+		if (CONFIG.broadcastOnCleanTrigger) runOnServerThread(() -> serverInstance.getPlayerManager().broadcast(Text.of(result.toString()), false));
 	}
 
 	public static void runOnServerThread(Runnable task) {
