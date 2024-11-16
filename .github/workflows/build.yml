@@ -52,17 +52,6 @@ jobs:
           name: autosystemgc-build
           path: build/libs/
 
-      - name: Update CHANGELOG.md
-        if: ${{ startsWith(steps.build_bin.outputs.binver, 'v') }}
-        uses: requarks/changelog-action@v1.10.2
-        with:
-          token: ${{ secrets.GH_TOKEN }}
-          tag: ${{ github.ref_name }}
-          includeInvalidCommits: true
-          excludeTypes: ''
-          useGitmojis: false
-          reverseOrder: true
-
       - name: Upload to Modrinth and Github
         if: ${{ startsWith(steps.build_bin.outputs.binver, 'v') }}
         uses: Kir-Antipov/mc-publish@v3.3
@@ -77,14 +66,4 @@ jobs:
           github-generate-changelog: true
           github-draft: false
           github-prerelease: false
-          changelog-file: CHANGELOG.md
-
-      - name: Commit CHANGELOG.md
-        if: ${{ startsWith(steps.build_bin.outputs.binver, 'v') }}
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          branch: master
-          commit_message: 'Release: Update CHANGELOG.md for ${{ steps.build_bin.outputs.binver }} [skip ci]'
-          file_pattern: CHANGELOG.md
-
- 
+          # changelog-file: CHANGELOG.md
