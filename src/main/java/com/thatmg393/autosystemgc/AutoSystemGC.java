@@ -107,21 +107,19 @@ public class AutoSystemGC implements ModInitializer, Runnable, MemoryListener, S
 
 	@Override
 	public void onConfigReload(Config reloadedConfig) {
-		runOnServerThread(() -> {
-			LOGGER.info("Reloading AutoSystemGC!");
-			currentConfig = reloadedConfig;
+		LOGGER.info("Reloading AutoSystemGC!");
+		currentConfig = reloadedConfig;
 			
-			scheduledExecutor.shutdownNow();
-			scheduledExecutor = Executors.newScheduledThreadPool(1);
+		scheduledExecutor.shutdownNow();
+		scheduledExecutor = Executors.newScheduledThreadPool(1);
 
-			memoryMonitor.removeListener(this);
-			memoryMonitor.stopMonitoring();
-			memoryMonitor = new MemoryMonitor(currentConfig.cleanThresholdPercent, currentConfig.memoryCheckInterval);
+		memoryMonitor.removeListener(this);
+		memoryMonitor.stopMonitoring();
+		memoryMonitor = new MemoryMonitor(currentConfig.cleanThresholdPercent, currentConfig.memoryCheckInterval);
 
-			onServerStarted(serverInstance);
+		onServerStarted(serverInstance);
 
-			LOGGER.info("Reload done.");
-		});
+		LOGGER.info("Reload done.");
 	}
 
 	public void runOnServerThread(Runnable task) {
